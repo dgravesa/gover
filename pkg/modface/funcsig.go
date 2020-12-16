@@ -13,9 +13,8 @@ import (
 // and should be directly comparable between different commits to ensure
 // that backwards compatibility is maintained.
 type FuncSig struct {
-	id         string
-	signature  string
-	isExported bool
+	id        string
+	signature string
 }
 
 // ID returns a unique identifier for the function signature.
@@ -28,15 +27,9 @@ func (fs FuncSig) String() string {
 	return fs.signature
 }
 
-// IsExported returns true if the function is exported; otherwise false
-func (fs FuncSig) IsExported() bool {
-	return fs.isExported
-}
-
 // ParseFuncSig parses a FuncDecl into a FuncSig.
 func ParseFuncSig(decl *ast.FuncDecl) FuncSig {
 	funcname := decl.Name.Name
-	isexport := decl.Name.IsExported()
 	recvtypes := flTypes(decl.Recv)
 	paramtypes := flTypes(decl.Type.Params)
 	resulttypes := flTypes(decl.Type.Results)
@@ -65,9 +58,8 @@ func ParseFuncSig(decl *ast.FuncDecl) FuncSig {
 	}
 
 	return FuncSig{
-		id:         fmt.Sprintf("%s%s", recvstr, funcname),
-		signature:  fmt.Sprintf("func %s%s%s%s", recvstr, funcname, paramsstr, resultsstr),
-		isExported: isexport,
+		id:        fmt.Sprintf("%s%s", recvstr, funcname),
+		signature: fmt.Sprintf("func %s%s%s%s", recvstr, funcname, paramsstr, resultsstr),
 	}
 }
 

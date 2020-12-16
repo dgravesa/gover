@@ -2,9 +2,6 @@ package main
 
 import (
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 
 	"github.com/dgravesa/gover/pkg/modface"
 	"github.com/spf13/cobra"
@@ -35,33 +32,21 @@ var printCmd = &cobra.Command{
 }
 
 func printModpath(moddir string) error {
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, moddir, nil, 0)
+	mf, err := modface.ParseMod(moddir)
 	if err != nil {
 		return err
 	}
 
-	// parse packages
-	for _, pkg := range pkgs {
-		// TODO: do this at the module level
-		fsigs := make(map[string]string)
+	for pkgname, pkgface := range mf {
+		fmt.Println("--------------------")
+		fmt.Println("package", pkgname)
+		fmt.Println("--------------------")
 
-		if ast.PackageExports(pkg) {
-			for _, file := range pkg.Files {
-				for _, decl := range file.Decls {
-					switch v := decl.(type) {
-					case *ast.FuncDecl:
-						fsig := modface.ParseFuncSig(v)
-						fsigs[fsig.ID()] = fsig.String()
-					}
-				}
-			}
+		for _, face := range pkgface {
+			fmt.Println(face)
 		}
 
-		// TODO: do this at the module level
-		for _, fs := range fsigs {
-			fmt.Printf("%s\n", fs)
-		}
+		fmt.Println()
 	}
 
 	return nil
