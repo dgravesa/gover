@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/dgravesa/gover/pkg/modface"
 	"github.com/spf13/cobra"
@@ -38,24 +37,14 @@ func printModuleInterface(moddir string) error {
 		return err
 	}
 
-	printHeader := func(header, linechar string) {
-		linestr := strings.Repeat(linechar, len(header))
-		fmt.Println(linestr)
-		fmt.Println(header)
-		fmt.Println(linestr)
-	}
-
-	printHeader("module "+module.Path, "=")
-	fmt.Println()
+	fmt.Println("module", module.Path)
 
 	for pkgname, pkgface := range module.Packages {
-		printHeader("package "+pkgname, "-")
+		fmt.Println("- package", pkgname)
 
 		for _, face := range pkgface {
-			fmt.Println(face)
+			fmt.Println("  -", face)
 		}
-
-		fmt.Println()
 	}
 
 	return nil
