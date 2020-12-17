@@ -11,6 +11,13 @@ import (
 // ModuleInterface represents all exports of a module.
 type ModuleInterface map[string]PackageInterface
 
+// Module represents a module.
+// The Package member contains all exports of the module.
+type Module struct {
+	Path     string
+	Packages map[string]PackageInterface
+}
+
 // Face represents an export.
 type Face interface {
 	String() string
@@ -18,23 +25,25 @@ type Face interface {
 }
 
 // ParseModule parses a module and returns all of its export signatures.
-func ParseModule(moddir string) (ModuleInterface, error) {
+func ParseModule(moddir string) (*Module, error) {
 	dirs, err := modparse.ModuleDirs(moddir)
 	if err != nil {
 		return nil, err
 	}
 
 	mfpath := filepath.Join(moddir, "go.mod")
-	mf, err := ioutil.ReadFile(mfpath)
+	mfile, err := ioutil.ReadFile(mfpath)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
-	modname := modfile.ModulePath(mf)
 
-	mface := make(ModuleInterface)
+	module := new(Module)
+	module.Path = modfile.ModulePath(mfile)
+	module.Packages = make(ModuleInterface)
+
 	for _, dir := range dirs {
-		parseDir(mface, dir, modname)
+		parseDir(module.Packages, dir, module.Path)
 	}
 
-	return mface, nil
+	return module, nil
 }

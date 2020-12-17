@@ -33,17 +33,23 @@ var printCmd = &cobra.Command{
 }
 
 func printModuleInterface(moddir string) error {
-	mf, err := modface.ParseModule(moddir)
+	module, err := modface.ParseModule(moddir)
 	if err != nil {
 		return err
 	}
 
-	for pkgname, pkgface := range mf {
-		pkgstr := fmt.Sprint("package ", pkgname)
-		linestr := strings.Repeat("-", len(pkgstr))
+	printHeader := func(header, linechar string) {
+		linestr := strings.Repeat(linechar, len(header))
 		fmt.Println(linestr)
-		fmt.Println(pkgstr)
+		fmt.Println(header)
 		fmt.Println(linestr)
+	}
+
+	printHeader("module "+module.Path, "=")
+	fmt.Println()
+
+	for pkgname, pkgface := range module.Packages {
+		printHeader("package "+pkgname, "-")
 
 		for _, face := range pkgface {
 			fmt.Println(face)

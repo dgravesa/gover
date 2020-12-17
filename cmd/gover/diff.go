@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +30,13 @@ var diffCmd = &cobra.Command{
 			diffModpaths = args
 		}
 
-		fmt.Println(changes, errcond, diffModpaths)
+		for _, modpath := range diffModpaths {
+			err := printModuleInterfaceDiff(modpath, changes, errcond)
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	},
 }
@@ -44,4 +48,17 @@ func init() {
 	diffErrors = makeOptsetFlag(diffCmd.Flags(), "errors", "e",
 		"condition to exit with error status code",
 		"none", "any", "breaking")
+}
+
+func printModuleInterfaceDiff(modpath string, pchanges, errcond string) error {
+	// currentModule, err := modface.ParseModule(modpath)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// repository, err := git.PlainOpen(modpath)
+	// if err != nil {
+	// 	return err
+	// }
+	return nil
 }
