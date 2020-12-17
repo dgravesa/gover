@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dgravesa/gover/pkg/modface"
 	"github.com/spf13/cobra"
@@ -38,9 +39,11 @@ func printModpath(moddir string) error {
 	}
 
 	for pkgname, pkgface := range mf {
-		fmt.Println("--------------------")
-		fmt.Println("package", pkgname)
-		fmt.Println("--------------------")
+		pkgstr := fmt.Sprint("package ", pkgname)
+		linestr := strings.Repeat("-", len(pkgstr))
+		fmt.Println(linestr)
+		fmt.Println(pkgstr)
+		fmt.Println(linestr)
 
 		for _, face := range pkgface {
 			fmt.Println(face)
