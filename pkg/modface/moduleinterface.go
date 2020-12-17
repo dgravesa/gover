@@ -8,8 +8,8 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-// ModFace represents all exports of a module.
-type ModFace map[string]PackFace
+// ModuleInterface represents all exports of a module.
+type ModuleInterface map[string]PackageInterface
 
 // Face represents an export.
 type Face interface {
@@ -17,9 +17,9 @@ type Face interface {
 	ID() string
 }
 
-// ParseMod parses a module and returns all of its export signatures.
-func ParseMod(moddir string) (ModFace, error) {
-	dirs, err := modparse.ModDirs(moddir)
+// ParseModule parses a module and returns all of its export signatures.
+func ParseModule(moddir string) (ModuleInterface, error) {
+	dirs, err := modparse.ModuleDirs(moddir)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func ParseMod(moddir string) (ModFace, error) {
 	}
 	modname := modfile.ModulePath(mf)
 
-	mface := make(ModFace)
+	mface := make(ModuleInterface)
 	for _, dir := range dirs {
 		parseDir(mface, dir, modname)
 	}

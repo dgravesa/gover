@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-// ModDirs returns relative paths to all directories which may be considered a part of the module.
-func ModDirs(path string) ([]string, error) {
-	return modDirs(path, true)
+// ModuleDirs returns relative paths to all directories which may be considered a part of the module.
+func ModuleDirs(path string) ([]string, error) {
+	return moduleDirs(path, true)
 }
 
-func modDirs(path string, thismod bool) ([]string, error) {
+func moduleDirs(path string, thismod bool) ([]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func modDirs(path string, thismod bool) ([]string, error) {
 		} else if isValidSubdir(fi) {
 			relpath := filepath.Join(path, fi.Name())
 			// module subdirectory
-			subdirs, err := modDirs(relpath, false)
+			subdirs, err := moduleDirs(relpath, false)
 			if err != nil {
 				return nil, err
 			}

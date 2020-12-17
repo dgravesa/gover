@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-// PackFace represents all exports of a package.
-type PackFace map[string]Face
+// PackageInterface represents all exports of a package.
+type PackageInterface map[string]Face
 
-func parseDir(inout ModFace, dir string, modname string) error {
+func parseDir(inout ModuleInterface, dir string, modname string) error {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, dir, nil, 0)
 	if err != nil {
@@ -33,7 +33,7 @@ func parseDir(inout ModFace, dir string, modname string) error {
 			pkgfullpath := filepath.Join(modname, dir)
 			pf, ok := inout[pkgfullpath]
 			if !ok {
-				pf = make(PackFace)
+				pf = make(PackageInterface)
 				inout[pkgfullpath] = pf
 			}
 
@@ -41,7 +41,7 @@ func parseDir(inout ModFace, dir string, modname string) error {
 				for _, decl := range file.Decls {
 					switch v := decl.(type) {
 					case *ast.FuncDecl:
-						fsig := ParseFuncSig(v)
+						fsig := ParseFuncSignature(v)
 						pf[fsig.ID()] = fsig
 					}
 				}

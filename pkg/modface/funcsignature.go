@@ -7,28 +7,28 @@ import (
 	"strings"
 )
 
-// FuncSig defines a function signature.
+// FuncSignature defines a function signature.
 // The ID is a short signature that should be uniquely identifying.
 // The Signature is a complete representation of the function's interface
 // and should be directly comparable between different commits to ensure
 // that backwards compatibility is maintained.
-type FuncSig struct {
+type FuncSignature struct {
 	id        string
 	signature string
 }
 
 // ID returns a unique identifier for the function signature.
 // A package should only have one function with this particular ID.
-func (fs FuncSig) ID() string {
+func (fs FuncSignature) ID() string {
 	return fs.id
 }
 
-func (fs FuncSig) String() string {
+func (fs FuncSignature) String() string {
 	return fs.signature
 }
 
-// ParseFuncSig parses a FuncDecl into a FuncSig.
-func ParseFuncSig(decl *ast.FuncDecl) FuncSig {
+// ParseFuncSignature parses a FuncDecl into a FuncSignature.
+func ParseFuncSignature(decl *ast.FuncDecl) FuncSignature {
 	funcname := decl.Name.Name
 	recvtypes := flTypes(decl.Recv)
 	paramtypes := flTypes(decl.Type.Params)
@@ -57,7 +57,7 @@ func ParseFuncSig(decl *ast.FuncDecl) FuncSig {
 		resultsstr = fmt.Sprintf(" (%s)", strings.Join(resulttypes, ", "))
 	}
 
-	return FuncSig{
+	return FuncSignature{
 		id:        fmt.Sprintf("%s%s", recvstr, funcname),
 		signature: fmt.Sprintf("func %s%s%s%s", recvstr, funcname, paramsstr, resultsstr),
 	}

@@ -33,7 +33,7 @@ var printCmd = &cobra.Command{
 }
 
 func printModpath(moddir string) error {
-	mf, err := modface.ParseMod(moddir)
+	mf, err := modface.ParseModule(moddir)
 	if err != nil {
 		return err
 	}
