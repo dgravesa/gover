@@ -22,7 +22,7 @@ var printCmd = &cobra.Command{
 		}
 
 		for _, modpath := range printModpaths {
-			err := printModpath(modpath)
+			err := printModuleInterface(modpath)
 			if err != nil {
 				return err
 			}
@@ -32,7 +32,7 @@ var printCmd = &cobra.Command{
 	},
 }
 
-func printModpath(moddir string) error {
+func printModuleInterface(moddir string) error {
 	mf, err := modface.ParseModule(moddir)
 	if err != nil {
 		return err
