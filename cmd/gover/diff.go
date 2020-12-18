@@ -11,7 +11,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-var diffModpaths = []string{"."}
+var diffModpath = "."
 
 var diffErrors *optset
 var diffChanges *optset
@@ -22,6 +22,7 @@ var diffCmd = &cobra.Command{
 	Long: `
 	Print module interface changes since most recent version based on git tags.
 	`,
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		changes, err := diffChanges.Value()
 		if err != nil {
@@ -35,20 +36,13 @@ var diffCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if len(args) != 0 {
-			diffModpaths = args
+		if len(args) > 0 {
+			diffModpath = args[0]
 		}
 
-		errorOccurred := false
-		for _, modpath := range diffModpaths {
-			err := printModuleInterfaceDiff(modpath, changes, errcond)
-			if err != nil {
-				fmt.Println("error:", err)
-				errorOccurred = true
-			}
-		}
-
-		if errorOccurred {
+		err = printModuleInterfaceDiff(diffModpath, changes, errcond)
+		if err != nil {
+			fmt.Println("error:", err)
 			os.Exit(2)
 		}
 	},
@@ -58,7 +52,7 @@ func init() {
 	diffChanges = makeOptsetFlag(diffCmd.Flags(), "changes", "c", "changes to print",
 		"any", "breaking")
 
-	diffErrors = makeOptsetFlag(diffCmd.Flags(), "errors", "e",
+	diffErrors = makeOptsetFlag(diffCmd.Flags(), "error", "e",
 		"condition to exit with error status code",
 		"none", "any", "breaking")
 }
@@ -150,16 +144,8 @@ func printModuleInterfaceDiff(modpath string, pchanges, errcond string) error {
 	// compute difference between module interfaces
 	moduleDifference := modface.Diff(recentVersionModule, currentModule)
 
-	switch pchanges {
-	case "breaking":
-		if moduleDifference.Breaking() {
-			printBreaking(currentModule.Path, moduleDifference)
-		}
-	default:
-		if moduleDifference.Any() {
-			printAny(currentModule.Path, moduleDifference)
-		}
-	}
+	// print differences to stdout as specified by change level
+	printDiff(currentModule.Path, moduleDifference, pchanges)
 
 	var resultStatus error
 	switch errcond {
@@ -178,7 +164,25 @@ func printModuleInterfaceDiff(modpath string, pchanges, errcond string) error {
 	return resultStatus
 }
 
-func printAny(modname string, moduleDifference *modface.ModuleDifference) {
+func printDiff(modname string, moduleDifference *modface.ModuleDifference, level string) {
+	type difference interface {
+		Any() bool
+		Breaking() bool
+	}
+
+	meetsLevel := func(d difference) bool {
+		if level == "any" && d.Any() {
+			return true
+		} else if level == "breaking" && d.Breaking() {
+			return true
+		}
+		return false
+	}
+
+	if !meetsLevel(moduleDifference) {
+		return
+	}
+
 	// print module name
 	fmt.Println("module", modname)
 	// print removals
@@ -191,43 +195,27 @@ func printAny(modname string, moduleDifference *modface.ModuleDifference) {
 	}
 	// print changes per package
 	for pkgname, pkgchanges := range moduleDifference.PackageChanges {
-		fmt.Println("- package", pkgname)
+		if !meetsLevel(pkgchanges) {
+			continue
+		}
+
+		fmt.Println("---", "package", pkgname)
 
 		// print package removals
 		for _, face := range pkgchanges.Removals {
-			fmt.Println("  <", face)
+			fmt.Println("<  ", face)
 		}
-		// print package additions
-		for _, face := range pkgchanges.Additions {
-			fmt.Println("  >", face)
+		if level == "any" {
+			// print package additions
+			for _, face := range pkgchanges.Additions {
+				fmt.Println(">  ", face)
+			}
 		}
 		// print package changes
 		for _, facediff := range pkgchanges.Changes {
-			fmt.Println("  -", facediff.Old, "->", facediff.New)
-		}
-	}
-}
-
-func printBreaking(modname string, moduleDifference *modface.ModuleDifference) {
-	// print module name
-	fmt.Println("module", modname)
-	// print removals
-	for pkgname := range moduleDifference.PackageRemovals {
-		fmt.Println("< package", pkgname)
-	}
-	// print changes per package
-	for pkgname, pkgchanges := range moduleDifference.PackageChanges {
-		if pkgchanges.Breaking() {
-			fmt.Println("- package", pkgname)
-
-			// print package removals
-			for _, face := range pkgchanges.Removals {
-				fmt.Println("  <", face)
-			}
-			// print package changes
-			for _, facediff := range pkgchanges.Changes {
-				fmt.Println("  -", facediff.Old, "->", facediff.New)
-			}
+			// fmt.Println("-  ", facediff.Old, "->", facediff.New)
+			fmt.Println("<  ", facediff.Old)
+			fmt.Println(">  ", facediff.New)
 		}
 	}
 }
