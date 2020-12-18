@@ -12,6 +12,7 @@ import (
 )
 
 var diffModpath = "."
+var compareVersion string
 
 var diffErrors *optset
 var diffChanges *optset
@@ -55,6 +56,8 @@ func init() {
 	diffErrors = makeOptsetFlag(diffCmd.Flags(), "error", "e",
 		"condition to exit with error status code",
 		"none", "any", "breaking")
+
+	diffCmd.Flags().StringVarP(&compareVersion, "version", "v", "", "specify version to compare against")
 }
 
 func printModuleInterfaceDiff(modpath string, pchanges, errcond string) error {
@@ -81,10 +84,28 @@ func printModuleInterfaceDiff(modpath string, pchanges, errcond string) error {
 			return
 		}
 
-		// get most recent version
-		mostRecentVersion := versions[0]
-		for _, version := range versions {
-			mostRecentVersion = semver.Max(version, mostRecentVersion)
+		if compareVersion == "" {
+			// get most recent version
+			compareVersion = versions[0]
+			for _, version := range versions {
+				compareVersion = semver.Max(version, compareVersion)
+			}
+		} else if !semver.IsValid(compareVersion) {
+			recentDone <- fmt.Errorf("not a valid version: %s", compareVersion)
+			return
+		} else {
+			versionExists := false
+			// verify version exists
+			for _, version := range versions {
+				if version == compareVersion {
+					versionExists = true
+					break
+				}
+			}
+			if !versionExists {
+				recentDone <- fmt.Errorf("version not found: %s", compareVersion)
+				return
+			}
 		}
 
 		// create temporary directory
@@ -113,7 +134,7 @@ func printModuleInterfaceDiff(modpath string, pchanges, errcond string) error {
 		}
 
 		// checkout recent version
-		checkoutcmd := exec.Command("git", "-C", tmpdir, "checkout", mostRecentVersion)
+		checkoutcmd := exec.Command("git", "-C", tmpdir, "checkout", compareVersion)
 		_, checkouterr := checkoutcmd.Output()
 		switch v := checkouterr.(type) {
 		case nil:
