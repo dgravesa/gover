@@ -9,11 +9,12 @@ import (
 
 // ModuleDirs returns relative paths to all directories which may be considered a part of the module.
 func ModuleDirs(path string) ([]string, error) {
-	return moduleDirs(path, true)
+	return moduleDirs(path, "", true)
 }
 
-func moduleDirs(path string, thismod bool) ([]string, error) {
-	f, err := os.Open(path)
+func moduleDirs(basepath, relpath string, thismod bool) ([]string, error) {
+	fullpath := filepath.Join(basepath, relpath)
+	f, err := os.Open(fullpath)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +24,7 @@ func moduleDirs(path string, thismod bool) ([]string, error) {
 		return nil, err
 	}
 
-	moddirs := []string{path}
+	moddirs := []string{relpath}
 	ismod := false
 
 	isValidSubdir := func(fi os.FileInfo) bool {
@@ -47,9 +48,9 @@ func moduleDirs(path string, thismod bool) ([]string, error) {
 				return []string{}, nil
 			}
 		} else if isValidSubdir(fi) {
-			relpath := filepath.Join(path, fi.Name())
+			subrelpath := filepath.Join(relpath, fi.Name())
 			// module subdirectory
-			subdirs, err := moduleDirs(relpath, false)
+			subdirs, err := moduleDirs(basepath, subrelpath, false)
 			if err != nil {
 				return nil, err
 			}
@@ -58,7 +59,7 @@ func moduleDirs(path string, thismod bool) ([]string, error) {
 	}
 
 	if thismod && !ismod {
-		return nil, fmt.Errorf("%s does not define a go module", path)
+		return nil, fmt.Errorf("%s does not define a go module", basepath)
 	}
 
 	return moddirs, nil

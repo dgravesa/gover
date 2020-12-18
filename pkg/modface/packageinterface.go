@@ -11,8 +11,9 @@ import (
 // PackageInterface represents all exports of a package.
 type PackageInterface map[string]Face
 
-func parseDir(inout ModuleInterface, dir string, modname string) error {
+func parseDir(inout ModuleInterface, basedir string, pkgdir, modname string) error {
 	fset := token.NewFileSet()
+	dir := filepath.Join(basedir, pkgdir)
 	pkgs, err := parser.ParseDir(fset, dir, nil, 0)
 	if err != nil {
 		return err
@@ -30,7 +31,7 @@ func parseDir(inout ModuleInterface, dir string, modname string) error {
 	// parse packages
 	for _, pkg := range pkgs {
 		if isFacePackage(pkg) {
-			pkgfullpath := filepath.Join(modname, dir)
+			pkgfullpath := filepath.Join(modname, pkgdir)
 			pf, ok := inout[pkgfullpath]
 			if !ok {
 				pf = make(PackageInterface)
