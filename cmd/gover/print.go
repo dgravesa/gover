@@ -15,7 +15,7 @@ var printCmd = &cobra.Command{
 	Long: `
 	Print all exports of a module
 	`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 0 {
 			printModpaths = args
 		}
@@ -23,11 +23,9 @@ var printCmd = &cobra.Command{
 		for _, modpath := range printModpaths {
 			err := printModuleInterface(modpath)
 			if err != nil {
-				return err
+				fmt.Println("error:", err)
 			}
 		}
-
-		return nil
 	},
 }
 

@@ -23,6 +23,21 @@ func (md ModuleDifference) Any() bool {
 	return false
 }
 
+// Breaking returns true if there are any breaking differences, otherwise false.
+// Any package removals or packages with breaking changes are considered breaking changes
+// for the module.
+func (md ModuleDifference) Breaking() bool {
+	if len(md.PackageRemovals) > 0 {
+		return true
+	}
+	for _, packdiff := range md.PackageChanges {
+		if packdiff.Breaking() {
+			return true
+		}
+	}
+	return false
+}
+
 // Diff computes the interface difference between two versions of a module.
 func Diff(oldmod, newmod *Module) *ModuleDifference {
 	moddiff := newModuleDifference()

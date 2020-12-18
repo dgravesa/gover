@@ -1,5 +1,6 @@
 package modface
 
+// PackageDifference returns the interface differences between two versions of a package.
 type PackageDifference struct {
 	Additions map[string]Face
 	Removals  map[string]Face
@@ -14,6 +15,7 @@ func newPackageDifference() *PackageDifference {
 	return pd
 }
 
+// FaceDiff contains the old and new faces.
 type FaceDiff struct {
 	Old Face
 	New Face
@@ -22,6 +24,15 @@ type FaceDiff struct {
 // Any returns true if there are any differences, otherwise false.
 func (pd PackageDifference) Any() bool {
 	if len(pd.Additions) > 0 || len(pd.Removals) > 0 || len(pd.Changes) > 0 {
+		return true
+	}
+	return false
+}
+
+// Breaking returns true if there are any breaking differences, otherwise false.
+// Any interface removals or changes in signature are considered breaking changes.
+func (pd PackageDifference) Breaking() bool {
+	if len(pd.Removals) > 0 || len(pd.Changes) > 0 {
 		return true
 	}
 	return false
