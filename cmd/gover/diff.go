@@ -66,17 +66,32 @@ func (d *diffCmd) Exec(args []string) error {
 		// copy module into temporary directory
 		cpycmd := exec.Command("cp", "-r", fmt.Sprintf("%s/", modpath), tmpdir)
 		_, cperr := cpycmd.Output()
-		rmcmd := exec.Command("rm", "-rf", tmpdir)
-		defer rmcmd.Run()
+
+		// NOTE: doing this manually because defer does not seem to like it
+		rmdir := func() {
+			rmcmd := exec.Command("rm", "-rf", tmpdir)
+			_, rmerr := rmcmd.Output()
+			// verify rm succeeded
+			switch v := rmerr.(type) {
+			case nil:
+				break
+			case *exec.ExitError:
+				fmt.Fprintln(os.Stderr, rmcmd.String(), string(v.Stderr))
+			default:
+				fmt.Fprintln(os.Stderr, "error:", v)
+			}
+		}
 
 		// verify copy succeeded
 		switch v := cperr.(type) {
 		case nil:
 			break
 		case *exec.ExitError:
+			rmdir()
 			recentDone <- fmt.Errorf("%s: %s", cpycmd, string(v.Stderr))
 			return
 		default:
+			rmdir()
 			recentDone <- fmt.Errorf("%s: %v", cpycmd, cperr)
 			return
 		}
@@ -88,15 +103,18 @@ func (d *diffCmd) Exec(args []string) error {
 		case nil:
 			break
 		case *exec.ExitError:
+			rmdir()
 			recentDone <- fmt.Errorf("%s: %s", checkoutcmd, string(v.Stderr))
 			return
 		default:
+			rmdir()
 			recentDone <- fmt.Errorf("%s: %v", checkoutcmd, err)
 			return
 		}
 
 		// parse version of module
 		compareModule, err = modface.ParseModule(tmpdir)
+		rmdir()
 		recentDone <- err
 	}()
 

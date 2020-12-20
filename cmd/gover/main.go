@@ -15,7 +15,7 @@ func main() {
 		flags.StringVar(&modpath, "C", ".", "path to module")
 	})
 
-	minicli.Cmd("print", "print module interface", newPrintCmd(&modpath))
+	minicli.Func("print", "print module interface", makePrintFunc(&modpath))
 
 	minicli.Cmd("diff", "compare module interface changes to previous version",
 		newDiffCmd(&modpath))
