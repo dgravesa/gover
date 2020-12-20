@@ -1,36 +1,28 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 
+	"github.com/dgravesa/minicli"
+
 	"github.com/dgravesa/gover/pkg/modface"
-	"github.com/spf13/cobra"
 )
 
-var printModpaths = []string{"."}
-
-var printCmd = &cobra.Command{
-	Use:   "print",
-	Short: "Print module interface",
-	Long: `
-	Print all exports of a module
-	`,
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 0 {
-			printModpaths = args
-		}
-
-		for _, modpath := range printModpaths {
-			err := printModuleInterface(modpath)
-			if err != nil {
-				fmt.Println("error:", err)
-			}
-		}
-	},
+type printCmd struct {
+	moddir *string
 }
 
-func printModuleInterface(moddir string) error {
-	module, err := modface.ParseModule(moddir)
+func newPrintCmd(moddir *string) minicli.CmdImpl {
+	return &printCmd{moddir}
+}
+
+func (p *printCmd) SetFlags(_ *flag.FlagSet) {
+	// no flags to set
+}
+
+func (p *printCmd) Exec(args []string) error {
+	module, err := modface.ParseModule(*p.moddir)
 	if err != nil {
 		return err
 	}

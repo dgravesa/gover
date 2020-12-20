@@ -1,26 +1,27 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
+	"github.com/dgravesa/minicli"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "gover",
-	Short: "Gover is a tool for versioning Go modules",
-	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Usage()
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(printCmd)
-	rootCmd.AddCommand(diffCmd)
-}
-
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	var modpath string
+
+	minicli.Flags("", "", func(flags *flag.FlagSet) {
+		flags.StringVar(&modpath, "C", ".", "path to module")
+	})
+
+	minicli.Cmd("print", "print module interface", newPrintCmd(&modpath))
+
+	minicli.Cmd("diff", "compare module interface changes to previous version",
+		newDiffCmd(&modpath))
+
+	if err := minicli.Exec(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
