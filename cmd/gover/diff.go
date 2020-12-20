@@ -1,244 +1,189 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+
+	"github.com/dgravesa/gover/pkg/modface"
 	"github.com/dgravesa/minicli"
 )
 
 type diffCmd struct {
-	moddir *string
+	modpath  *string // injected by main command
+	pchanges *optset
+	errcond  *optset
+	compare  string
 }
 
-func newDiffCmd(moddir *string) minicli.CmdImpl {
-	// TODO: implement
-	return nil
+func newDiffCmd(modpath *string) minicli.CmdImpl {
+	return &diffCmd{modpath: modpath}
 }
 
-// var diffModpath = "."
-// var compareVersion string
+func (d *diffCmd) SetFlags(flags *flag.FlagSet) {
+	d.pchanges = makeOptsetFlag(flags, "changes", "changes to print", "any", "breaking")
+	d.errcond = makeOptsetFlag(flags, "error", "condition to exit with error status code",
+		"none", "breaking", "any")
+	flags.StringVar(&d.compare, "compare", "HEAD", "specify commit or tag to compare against")
+}
 
-// var diffErrors *optset
-// var diffChanges *optset
+func (d *diffCmd) Exec(args []string) error {
+	// validate changes and error arguments
+	pchanges, err := d.pchanges.Value()
+	if err != nil {
+		return err
+	}
+	errcond, err := d.errcond.Value()
+	if err != nil {
+		return err
+	}
 
-// var diffCmd = &cobra.Command{
-// 	Use:   "diff",
-// 	Short: "Print module interface diff",
-// 	Long: `
-// 	Print module interface changes since most recent version based on git tags.
-// 	`,
-// 	Args: cobra.MaximumNArgs(1),
-// 	Run: func(cmd *cobra.Command, args []string) {
-// 		changes, err := diffChanges.Value()
-// 		if err != nil {
-// 			fmt.Println("error:", err)
-// 			os.Exit(1)
-// 		}
+	modpath := *d.modpath
 
-// 		errcond, err := diffErrors.Value()
-// 		if err != nil {
-// 			fmt.Println("error:", err)
-// 			os.Exit(1)
-// 		}
+	var currentModule *modface.Module
+	var compareModule *modface.Module
+	currentDone := make(chan error)
+	recentDone := make(chan error)
 
-// 		if len(args) > 0 {
-// 			diffModpath = args[0]
-// 		}
+	// parse current module interface
+	go func() {
+		var err error
+		currentModule, err = modface.ParseModule(modpath)
+		currentDone <- err
+	}()
 
-// 		err = printModuleInterfaceDiff(diffModpath, changes, errcond)
-// 		if err != nil {
-// 			fmt.Println("error:", err)
-// 			os.Exit(2)
-// 		}
-// 	},
-// }
+	// copy module and checkout compare version
+	go func() {
+		// create temporary directory
+		tmpdir, err := ioutil.TempDir(os.TempDir(), "gover-*")
+		if err != nil {
+			recentDone <- err
+			return
+		}
 
-// func init() {
-// 	diffChanges = makeOptsetFlag(diffCmd.Flags(), "changes", "c", "changes to print",
-// 		"any", "breaking")
+		// copy module into temporary directory
+		cpycmd := exec.Command("cp", "-r", fmt.Sprintf("%s/", modpath), tmpdir)
+		_, cperr := cpycmd.Output()
+		rmcmd := exec.Command("rm", "-rf", tmpdir)
+		defer rmcmd.Run()
 
-// 	diffErrors = makeOptsetFlag(diffCmd.Flags(), "error", "e",
-// 		"condition to exit with error status code",
-// 		"none", "any", "breaking")
+		// verify copy succeeded
+		switch v := cperr.(type) {
+		case nil:
+			break
+		case *exec.ExitError:
+			recentDone <- fmt.Errorf("%s: %s", cpycmd, string(v.Stderr))
+			return
+		default:
+			recentDone <- fmt.Errorf("%s: %v", cpycmd, cperr)
+			return
+		}
 
-// 	diffCmd.Flags().StringVarP(&compareVersion, "version", "v", "", "specify version to compare against")
-// }
+		// checkout recent version
+		checkoutcmd := exec.Command("git", "-C", tmpdir, "checkout", "-f", d.compare)
+		_, checkouterr := checkoutcmd.Output()
+		switch v := checkouterr.(type) {
+		case nil:
+			break
+		case *exec.ExitError:
+			recentDone <- fmt.Errorf("%s: %s", checkoutcmd, string(v.Stderr))
+			return
+		default:
+			recentDone <- fmt.Errorf("%s: %v", checkoutcmd, err)
+			return
+		}
 
-// func printModuleInterfaceDiff(modpath string, pchanges, errcond string) error {
-// 	var currentModule *modface.Module
-// 	var recentVersionModule *modface.Module
-// 	currentDone := make(chan error)
-// 	recentDone := make(chan error)
+		// parse version of module
+		compareModule, err = modface.ParseModule(tmpdir)
+		recentDone <- err
+	}()
 
-// 	// parse current module interface
-// 	go func() {
-// 		var err error
-// 		currentModule, err = modface.ParseModule(modpath)
-// 		currentDone <- err
-// 	}()
+	// wait for results
+	currentErr := <-currentDone
+	recentErr := <-recentDone
 
-// 	// copy module and checkout recent version
-// 	go func() {
-// 		versions, err := modface.Versions(modpath)
-// 		if err != nil {
-// 			recentDone <- err
-// 			return
-// 		} else if len(versions) == 0 {
-// 			recentDone <- fmt.Errorf("%s : no versions detected", modpath)
-// 			return
-// 		}
+	if currentErr != nil {
+		return currentErr
+	} else if recentErr != nil {
+		return recentErr
+	}
 
-// 		if compareVersion == "" {
-// 			// get most recent version
-// 			compareVersion = versions[0]
-// 			for _, version := range versions {
-// 				compareVersion = semver.Max(version, compareVersion)
-// 			}
-// 		} else if !semver.IsValid(compareVersion) {
-// 			recentDone <- fmt.Errorf("not a valid version: %s", compareVersion)
-// 			return
-// 		} else {
-// 			versionExists := false
-// 			// verify version exists
-// 			for _, version := range versions {
-// 				if version == compareVersion {
-// 					versionExists = true
-// 					break
-// 				}
-// 			}
-// 			if !versionExists {
-// 				recentDone <- fmt.Errorf("version not found: %s", compareVersion)
-// 				return
-// 			}
-// 		}
+	// compute difference between module interfaces
+	moduleDifference := modface.Diff(compareModule, currentModule)
 
-// 		// create temporary directory
-// 		tmpdir, err := ioutil.TempDir(os.TempDir(), "gover-*")
-// 		if err != nil {
-// 			recentDone <- err
-// 			return
-// 		}
+	// print differences to stdout as specified by change level
+	printDiff(currentModule.Path, moduleDifference, pchanges)
 
-// 		// copy module into temporary directory
-// 		cpycmd := exec.Command("cp", "-r", fmt.Sprintf("%s/", modpath), tmpdir)
-// 		_, cperr := cpycmd.Output()
-// 		rmcmd := exec.Command("rm", "-rf", tmpdir)
-// 		defer rmcmd.Run()
+	var resultStatus error
+	switch errcond {
+	case "breaking":
+		if moduleDifference.Breaking() {
+			resultStatus = fmt.Errorf("breaking changes detected")
+		}
+	case "any":
+		if moduleDifference.Any() {
+			resultStatus = fmt.Errorf("changes detected")
+		}
+	default:
+		resultStatus = nil
+	}
 
-// 		// verify copy succeeded
-// 		switch v := cperr.(type) {
-// 		case nil:
-// 			break
-// 		case *exec.ExitError:
-// 			recentDone <- fmt.Errorf("%s: %s", cpycmd, string(v.Stderr))
-// 			return
-// 		default:
-// 			recentDone <- fmt.Errorf("%s: %v", cpycmd, cperr)
-// 			return
-// 		}
+	return resultStatus
+}
 
-// 		// checkout recent version
-// 		checkoutcmd := exec.Command("git", "-C", tmpdir, "checkout", "-f", compareVersion)
-// 		_, checkouterr := checkoutcmd.Output()
-// 		switch v := checkouterr.(type) {
-// 		case nil:
-// 			break
-// 		case *exec.ExitError:
-// 			recentDone <- fmt.Errorf("%s: %s", checkoutcmd, string(v.Stderr))
-// 			return
-// 		default:
-// 			recentDone <- fmt.Errorf("%s: %v", checkoutcmd, err)
-// 			return
-// 		}
+func printDiff(modname string, moduleDifference *modface.ModuleDifference, level string) {
+	type difference interface {
+		Any() bool
+		Breaking() bool
+	}
 
-// 		// parse version of module
-// 		recentVersionModule, err = modface.ParseModule(tmpdir)
-// 		recentDone <- err
-// 	}()
+	meetsLevel := func(d difference) bool {
+		if level == "any" && d.Any() {
+			return true
+		} else if level == "breaking" && d.Breaking() {
+			return true
+		}
+		return false
+	}
 
-// 	// wait for results
-// 	currentErr := <-currentDone
-// 	recentErr := <-recentDone
+	if !meetsLevel(moduleDifference) {
+		return
+	}
 
-// 	if currentErr != nil {
-// 		return currentErr
-// 	} else if recentErr != nil {
-// 		return recentErr
-// 	}
+	// print module name
+	fmt.Println("module", modname)
+	// print removals
+	for pkgname := range moduleDifference.PackageRemovals {
+		fmt.Println("< package", pkgname)
+	}
+	// print additions
+	for pkgname := range moduleDifference.PackageAdditions {
+		fmt.Println("> package", pkgname)
+	}
+	// print changes per package
+	for pkgname, pkgchanges := range moduleDifference.PackageChanges {
+		if !meetsLevel(pkgchanges) {
+			continue
+		}
 
-// 	// compute difference between module interfaces
-// 	moduleDifference := modface.Diff(recentVersionModule, currentModule)
+		fmt.Println("---", "package", pkgname)
 
-// 	// print differences to stdout as specified by change level
-// 	printDiff(currentModule.Path, moduleDifference, pchanges)
-
-// 	var resultStatus error
-// 	switch errcond {
-// 	case "breaking":
-// 		if moduleDifference.Breaking() {
-// 			resultStatus = fmt.Errorf("breaking changes detected")
-// 		}
-// 	case "any":
-// 		if moduleDifference.Any() {
-// 			resultStatus = fmt.Errorf("changes detected")
-// 		}
-// 	default:
-// 		resultStatus = nil
-// 	}
-
-// 	return resultStatus
-// }
-
-// func printDiff(modname string, moduleDifference *modface.ModuleDifference, level string) {
-// 	type difference interface {
-// 		Any() bool
-// 		Breaking() bool
-// 	}
-
-// 	meetsLevel := func(d difference) bool {
-// 		if level == "any" && d.Any() {
-// 			return true
-// 		} else if level == "breaking" && d.Breaking() {
-// 			return true
-// 		}
-// 		return false
-// 	}
-
-// 	if !meetsLevel(moduleDifference) {
-// 		return
-// 	}
-
-// 	// print module name
-// 	fmt.Println("module", modname)
-// 	// print removals
-// 	for pkgname := range moduleDifference.PackageRemovals {
-// 		fmt.Println("< package", pkgname)
-// 	}
-// 	// print additions
-// 	for pkgname := range moduleDifference.PackageAdditions {
-// 		fmt.Println("> package", pkgname)
-// 	}
-// 	// print changes per package
-// 	for pkgname, pkgchanges := range moduleDifference.PackageChanges {
-// 		if !meetsLevel(pkgchanges) {
-// 			continue
-// 		}
-
-// 		fmt.Println("---", "package", pkgname)
-
-// 		// print package removals
-// 		for _, face := range pkgchanges.Removals {
-// 			fmt.Println("<  ", face)
-// 		}
-// 		if level == "any" {
-// 			// print package additions
-// 			for _, face := range pkgchanges.Additions {
-// 				fmt.Println(">  ", face)
-// 			}
-// 		}
-// 		// print package changes
-// 		for _, facediff := range pkgchanges.Changes {
-// 			// fmt.Println("-  ", facediff.Old, "->", facediff.New)
-// 			fmt.Println("<  ", facediff.Old)
-// 			fmt.Println(">  ", facediff.New)
-// 		}
-// 	}
-// }
+		// print package removals
+		for _, face := range pkgchanges.Removals {
+			fmt.Println("<  ", face)
+		}
+		if level == "any" {
+			// print package additions
+			for _, face := range pkgchanges.Additions {
+				fmt.Println(">  ", face)
+			}
+		}
+		// print package changes
+		for _, facediff := range pkgchanges.Changes {
+			fmt.Println("<  ", facediff.Old)
+			fmt.Println(">  ", facediff.New)
+		}
+	}
+}
