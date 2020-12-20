@@ -134,7 +134,7 @@ func printModuleInterfaceDiff(modpath string, pchanges, errcond string) error {
 		}
 
 		// checkout recent version
-		checkoutcmd := exec.Command("git", "-C", tmpdir, "checkout", compareVersion)
+		checkoutcmd := exec.Command("git", "-C", tmpdir, "checkout", "-f", compareVersion)
 		_, checkouterr := checkoutcmd.Output()
 		switch v := checkouterr.(type) {
 		case nil:
