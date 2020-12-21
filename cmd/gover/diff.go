@@ -40,8 +40,32 @@ func (d *diffCmd) Exec(args []string) error {
 		return err
 	}
 
-	modpath := *d.modpath
+	moduleDifference, err := diff(*d.modpath, d.compare)
+	if err != nil {
+		return err
+	}
 
+	// print differences to stdout as specified by change level
+	printDiff(moduleDifference, pchanges)
+
+	var resultStatus error
+	switch errcond {
+	case "breaking":
+		if moduleDifference.Breaking() {
+			resultStatus = fmt.Errorf("breaking changes detected")
+		}
+	case "any":
+		if moduleDifference.Any() {
+			resultStatus = fmt.Errorf("changes detected")
+		}
+	default:
+		resultStatus = nil
+	}
+
+	return resultStatus
+}
+
+func diff(modpath string, compareID string) (*modface.ModuleDifference, error) {
 	var currentModule *modface.Module
 	var compareModule *modface.Module
 	currentDone := make(chan error)
@@ -97,7 +121,7 @@ func (d *diffCmd) Exec(args []string) error {
 		}
 
 		// checkout recent version
-		checkoutcmd := exec.Command("git", "-C", tmpdir, "checkout", "-f", d.compare)
+		checkoutcmd := exec.Command("git", "-C", tmpdir, "checkout", "-f", compareID)
 		_, checkouterr := checkoutcmd.Output()
 		switch v := checkouterr.(type) {
 		case nil:
@@ -123,35 +147,18 @@ func (d *diffCmd) Exec(args []string) error {
 	recentErr := <-recentDone
 
 	if currentErr != nil {
-		return currentErr
+		return nil, currentErr
 	} else if recentErr != nil {
-		return recentErr
+		return nil, recentErr
 	}
 
 	// compute difference between module interfaces
 	moduleDifference := modface.Diff(compareModule, currentModule)
 
-	// print differences to stdout as specified by change level
-	printDiff(currentModule.Path, moduleDifference, pchanges)
-
-	var resultStatus error
-	switch errcond {
-	case "breaking":
-		if moduleDifference.Breaking() {
-			resultStatus = fmt.Errorf("breaking changes detected")
-		}
-	case "any":
-		if moduleDifference.Any() {
-			resultStatus = fmt.Errorf("changes detected")
-		}
-	default:
-		resultStatus = nil
-	}
-
-	return resultStatus
+	return moduleDifference, nil
 }
 
-func printDiff(modname string, moduleDifference *modface.ModuleDifference, level string) {
+func printDiff(moduleDifference *modface.ModuleDifference, level string) {
 	type difference interface {
 		Any() bool
 		Breaking() bool
@@ -171,7 +178,13 @@ func printDiff(modname string, moduleDifference *modface.ModuleDifference, level
 	}
 
 	// print module name
-	fmt.Println("module", modname)
+	if !moduleDifference.ModPathsMatch {
+		fmt.Println("< module", moduleDifference.OldModPath)
+		fmt.Println("> module", moduleDifference.ModPath)
+		// do not attempt to print further since everything would be a difference
+		return
+	}
+	fmt.Println("module", moduleDifference.ModPath)
 	// print removals
 	for pkgname := range moduleDifference.PackageRemovals {
 		fmt.Println("< package", pkgname)

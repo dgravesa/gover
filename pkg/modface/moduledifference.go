@@ -2,6 +2,9 @@ package modface
 
 // ModuleDifference represents the interface difference between two versions of a module.
 type ModuleDifference struct {
+	ModPath          string
+	OldModPath       string
+	ModPathsMatch    bool
 	PackageRemovals  map[string]PackageInterface
 	PackageAdditions map[string]PackageInterface
 	PackageChanges   map[string]*PackageDifference
@@ -17,7 +20,8 @@ func newModuleDifference() *ModuleDifference {
 
 // Any returns true if there are any differences, otherwise false.
 func (md ModuleDifference) Any() bool {
-	if len(md.PackageAdditions) > 0 || len(md.PackageRemovals) > 0 || len(md.PackageChanges) > 0 {
+	numChanges := len(md.PackageAdditions) + len(md.PackageRemovals) + len(md.PackageChanges)
+	if !md.ModPathsMatch || numChanges > 0 {
 		return true
 	}
 	return false
@@ -27,7 +31,7 @@ func (md ModuleDifference) Any() bool {
 // Any package removals or packages with breaking changes are considered breaking changes
 // for the module.
 func (md ModuleDifference) Breaking() bool {
-	if len(md.PackageRemovals) > 0 {
+	if !md.ModPathsMatch || len(md.PackageRemovals) > 0 {
 		return true
 	}
 	for _, packdiff := range md.PackageChanges {
@@ -41,6 +45,9 @@ func (md ModuleDifference) Breaking() bool {
 // Diff computes the interface difference between two versions of a module.
 func Diff(oldmod, newmod *Module) *ModuleDifference {
 	moddiff := newModuleDifference()
+	moddiff.ModPath = newmod.Path
+	moddiff.OldModPath = oldmod.Path
+	moddiff.ModPathsMatch = oldmod.Path == newmod.Path
 
 	for pkgname, oldpack := range oldmod.Packages {
 		newpack, found := newmod.Packages[pkgname]
