@@ -20,6 +20,8 @@ func main() {
 	minicli.Cmd("diff", "compare module interface changes to previous version",
 		newDiffCmd(&modpath))
 
+	minicli.Cmd("tag", "tag with a suggested version", newTagCmd(&modpath))
+
 	if err := minicli.Exec(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
