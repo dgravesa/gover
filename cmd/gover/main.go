@@ -11,18 +11,20 @@ import (
 func main() {
 	var modpath string
 
-	minicli.Flags("", "", func(flags *flag.FlagSet) {
+	cli := minicli.New()
+
+	cli.Flags("", "", func(flags *flag.FlagSet) {
 		flags.StringVar(&modpath, "C", ".", "path to module")
 	})
 
-	minicli.Func("print", "print module interface", makePrintFunc(&modpath))
+	cli.Func("print", "print module interface", makePrintFunc(&modpath))
 
-	minicli.Cmd("diff", "compare module interface changes to previous version",
+	cli.Cmd("diff", "compare module interface changes to previous version",
 		newDiffCmd(&modpath))
 
-	minicli.Cmd("tag", "tag with a suggested version", newTagCmd(&modpath))
+	cli.Cmd("tag", "tag with a suggested version", newTagCmd(&modpath))
 
-	if err := minicli.Exec(); err != nil {
+	if err := cli.Exec(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
