@@ -22,7 +22,10 @@ func main() {
 	cli.Cmd("diff", "compare module interface changes to previous version",
 		newDiffCmd(&modpath))
 
-	cli.Cmd("tag", "tag with a suggested version", newTagCmd(&modpath))
+	// TODO: cowardly removing for now, needs more work to be safer
+	// cli.Cmd("tag", "tag with a suggested version", newTagCmd(&modpath))
+
+	cli.Func("suggest", "suggest a new semantic version", makeSuggestFunc(&modpath))
 
 	if err := cli.Exec(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
