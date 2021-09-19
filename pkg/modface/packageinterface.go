@@ -42,8 +42,12 @@ func parseDir(inout ModuleInterface, basedir string, pkgdir, modname string) err
 				for _, decl := range file.Decls {
 					switch v := decl.(type) {
 					case *ast.FuncDecl:
-						fsig := ParseFuncSignature(v)
-						pf[fsig.ID()] = fsig
+						fs := ParseFuncSignature(v)
+						funcExported := ast.IsExported(fs.Name)
+						recvNotAnonymous := !fs.Receiver.IsDefined() || fs.Receiver.IsExported()
+						if funcExported && recvNotAnonymous {
+							pf[fs.ID()] = fs
+						}
 					}
 				}
 			}
