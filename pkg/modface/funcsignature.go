@@ -7,10 +7,6 @@ import (
 )
 
 // FuncSignature defines a function signature.
-// The ID is a short signature that should be uniquely identifying.
-// The Signature is a complete representation of the function's interface
-// and should be directly comparable between different commits to ensure
-// that backwards compatibility is maintained.
 type FuncSignature struct {
 	Name     string
 	Receiver Type
@@ -21,7 +17,10 @@ type FuncSignature struct {
 // ID returns a unique identifier for the function signature.
 // A package should only have one function with this particular ID.
 func (fs FuncSignature) ID() string {
-	return fmt.Sprintf("%s.%s", fs.Receiver.Name, fs.Name)
+	if fs.Receiver.IsDefined() {
+		return fmt.Sprintf("%s.%s", fs.Receiver.Name, fs.Name)
+	}
+	return fs.Name
 }
 
 func (fs FuncSignature) String() string {
@@ -54,8 +53,8 @@ func (fs FuncSignature) compareString() string {
 	return fs.String()
 }
 
-// ParseFuncSignature parses a FuncDecl into a FuncSignature.
-func ParseFuncSignature(decl *ast.FuncDecl) FuncSignature {
+// TODO: may need to incorporate an import cache into arguments.
+func parseFuncSignature(decl *ast.FuncDecl) FuncSignature {
 	fs := FuncSignature{
 		Name:    decl.Name.Name,
 		Params:  extractTypeList(decl.Type.Params),
