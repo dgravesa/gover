@@ -9,7 +9,7 @@ import (
 )
 
 // PackageInterface represents all exports of a package.
-type PackageInterface map[string]Face
+type PackageInterface map[string]Export
 
 func parseDir(inout ModuleInterface, basedir string, pkgdir, modname string) error {
 	fset := token.NewFileSet()
@@ -19,7 +19,7 @@ func parseDir(inout ModuleInterface, basedir string, pkgdir, modname string) err
 		return err
 	}
 
-	isFacePackage := func(pkg *ast.Package) bool {
+	hasExports := func(pkg *ast.Package) bool {
 		if strings.HasSuffix(pkg.Name, "_test") {
 			return false
 		} else if !ast.PackageExports(pkg) {
@@ -30,7 +30,7 @@ func parseDir(inout ModuleInterface, basedir string, pkgdir, modname string) err
 
 	// parse packages
 	for _, pkg := range pkgs {
-		if isFacePackage(pkg) {
+		if hasExports(pkg) {
 			pkgfullpath := filepath.Join(modname, pkgdir)
 			pf, ok := inout[pkgfullpath]
 			if !ok {

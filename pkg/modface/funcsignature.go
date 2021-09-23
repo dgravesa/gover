@@ -47,6 +47,13 @@ func (fs FuncSignature) String() string {
 	return sb.String()
 }
 
+func (fs FuncSignature) compareString() string {
+	// TODO: consider underlying package change. For example:
+	// before: func(x pkg.Type) depends on module named github.com/a/pkg
+	// after: func(x pkg.Type) depends on module named github.com/b/pkg
+	return fs.String()
+}
+
 // ParseFuncSignature parses a FuncDecl into a FuncSignature.
 func ParseFuncSignature(decl *ast.FuncDecl) FuncSignature {
 	fs := FuncSignature{

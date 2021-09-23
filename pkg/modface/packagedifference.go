@@ -2,23 +2,23 @@ package modface
 
 // PackageDifference returns the interface differences between two versions of a package.
 type PackageDifference struct {
-	Additions map[string]Face
-	Removals  map[string]Face
-	Changes   map[string]FaceDiff
+	Additions map[string]Export
+	Removals  map[string]Export
+	Changes   map[string]ExportDifference
 }
 
 func newPackageDifference() *PackageDifference {
 	pd := new(PackageDifference)
-	pd.Additions = make(map[string]Face)
-	pd.Removals = make(map[string]Face)
-	pd.Changes = make(map[string]FaceDiff)
+	pd.Additions = make(map[string]Export)
+	pd.Removals = make(map[string]Export)
+	pd.Changes = make(map[string]ExportDifference)
 	return pd
 }
 
-// FaceDiff contains the old and new faces.
-type FaceDiff struct {
-	Old Face
-	New Face
+// ExportDifference contains the old and new faces.
+type ExportDifference struct {
+	Old Export
+	New Export
 }
 
 // Any returns true if there are any differences, otherwise false.
@@ -47,9 +47,9 @@ func PackageDiff(oldpack, newpack PackageInterface) *PackageDifference {
 		if !found {
 			// face in old but not in new, so it has been removed
 			packdiff.Removals[id] = oldface
-		} else if !FacesEqual(oldface, newface) {
+		} else if !ExportsEqual(oldface, newface) {
 			// face has changed
-			packdiff.Changes[id] = FaceDiff{
+			packdiff.Changes[id] = ExportDifference{
 				Old: oldface,
 				New: newface,
 			}
