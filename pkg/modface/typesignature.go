@@ -46,19 +46,19 @@ func parseTypeSignatureAndUpdatePackageInterface(
 		// example: type Duh []int
 	case *ast.Ident:
 		// example: type MyInt int
-		// TODO: this may not need module cache at all
-		ts, err := parseIdentTypeSignature(typeName, v, cache)
-		if err != nil {
-			return err
-		}
+		ts := parseIdentTypeSignature(typeName, v)
 		inout[ts.ID()] = ts
 	case *ast.StarExpr:
 		// TODO: implement
 		// example: type MyPtr *int
 		// example: type MyContextPtr *context.Context
 	case *ast.SelectorExpr:
-		// TODO: implement
-		// example: type MyFloat math.Float64
+		// example: type MyContext context.Context
+		ts, err := parseSelectorTypeSignature(typeName, v, false, cache)
+		if err != nil {
+			return err
+		}
+		inout[ts.ID()] = ts
 	case *ast.FuncType:
 		// TODO: implement
 		// example: type DuhFunc func(int) int
@@ -76,5 +76,6 @@ func parseTypeSignatureAndUpdatePackageInterface(
 // TODO: implement, then remove all of these
 // type MyInt int // implemented
 // type MyPtr *int
-// type MyFloat math.Float64
+// type MyFloat context.Context
+
 // type MyContextPtr *context.Context
