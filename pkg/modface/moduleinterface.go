@@ -40,7 +40,10 @@ func ParseModule(moddir string) (*Module, error) {
 	module.Packages = make(ModuleInterface)
 
 	for _, dir := range dirs {
-		parseDir(module.Packages, moddir, dir, module.Path)
+		err = parseDir(module.Packages, moddir, dir, module.Path)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return module, nil

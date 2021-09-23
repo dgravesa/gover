@@ -58,26 +58,19 @@ func parseDir(inout ModuleInterface, basedir string, pkgdir, modname string) err
 					case *ast.GenDecl:
 						for _, spec := range d.Specs {
 							switch s := spec.(type) {
-							case *ast.ImportSpec:
-								// TODO: does this ever happen?
-								cache.Insert(s)
 							case *ast.TypeSpec:
-								// ts := parseTypeSignature(s, pkgfullpath)
-								// NOTE: because of recursive nature of parsing, it's more
-								// efficient to update package interface while parsing the
-								// type signature, its fields, and potential subfields.
-								err := parseTypeSignatureAndUpdatePackageInterface(
-									pf, s, pkgfullpath, "", cache)
-								if err != nil {
+								ts, err := parseTypeSignature(s, cache)
+								switch err.(type) {
+								case nil:
+									pf[ts.ID()] = ts
+								case errTypeNotExported:
+									continue
+								case errExprTypeNotSupported:
+									// TODO: just printing warning for now, remove later
+									fmt.Printf("warning: %s\n", err)
+								default:
 									return err
 								}
-								// if ast.IsExported(ts.Name) {
-								// 	pf[ts.ID()] = ts
-								// 	insertRecursiveFieldSignatures(pf, ts.Fields, "")
-								// 	for _, field := range ts.Fields {
-
-								// 	}
-								// }
 							case *ast.ValueSpec:
 								switch d.Tok {
 								case token.CONST:
