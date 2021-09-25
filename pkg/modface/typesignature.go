@@ -80,6 +80,12 @@ func parseExprToTypeIdentifier(expr ast.Expr, cache *importCache) (TypeIdentifie
 	case *ast.FuncType:
 		// example: type MyFunc func(string) (int, error)
 		return parseFuncTypeToTypeIdentifier(x, cache)
+	case *ast.Ellipsis:
+		typeID, err := parseExprToTypeIdentifier(x.Elt, cache)
+		if err != nil {
+			return nil, err
+		}
+		return EllipsisTypeIdentifier{TypeIdentifier: typeID}, nil
 	default:
 		return nil, errExprTypeNotSupported{x: x}
 		// case *ast.StructType:
@@ -94,13 +100,8 @@ func parseExprToTypeIdentifier(expr ast.Expr, cache *importCache) (TypeIdentifie
 		// case *ast.ArrayType:
 		// 	// example: type Duh []int
 		// 	fallthrough
-		// case *ast.FuncType:
-		// 	// example: type DuhFunc func(int) int
-		// 	fallthrough
 		// case *ast.ChanType:
 		// 	// example: type Duh chan
-		// 	fallthrough
-		// case *ast.Ellipsis:
 		// 	fallthrough
 	}
 }
