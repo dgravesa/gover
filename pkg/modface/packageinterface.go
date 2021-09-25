@@ -49,11 +49,16 @@ func parseDir(inout ModuleInterface, basedir string, pkgdir, modname string) err
 				for _, decl := range file.Decls {
 					switch d := decl.(type) {
 					case *ast.FuncDecl:
-						fs := parseFuncSignature(d)
-						funcExported := ast.IsExported(fs.Name)
-						recvNotAnonymous := !fs.Receiver.IsDefined() || fs.Receiver.IsExported()
-						if funcExported && recvNotAnonymous {
-							pf[fs.ID()] = fs
+						fs, err := parseFuncSignature(d, cache)
+						switch err.(type) {
+						case nil:
+							if fs.IsExported() {
+								pf[fs.ID()] = fs
+							}
+						case errExprTypeNotSupported:
+							continue // TODO: remove once all necessary types are supported
+						default:
+							return err
 						}
 					case *ast.GenDecl:
 						for _, spec := range d.Specs {

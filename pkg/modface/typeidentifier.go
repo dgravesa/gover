@@ -13,7 +13,6 @@ type TypeIdentifier interface {
 	String() string
 
 	// TypeID returns a certain, unmistakable type with full package name qualifiers.
-	// TODO: consider making this not a part of the public interface
 	typeID() string
 }
 
@@ -30,7 +29,7 @@ func parseExprToTypeIdentifier(expr ast.Expr, cache *importCache) (TypeIdentifie
 	case *ast.Ident:
 		// example: type MyInt int
 		// example: type MyType MyLocalType
-		return LocalTypeIdentifier{TypeName: x.Name}, nil
+		return &LocalTypeIdentifier{TypeName: x.Name}, nil
 	case *ast.SelectorExpr:
 		// example: type MyContext context.Context
 		return parseSelectorExprToTypeIdentifier(x, cache)
@@ -41,16 +40,16 @@ func parseExprToTypeIdentifier(expr ast.Expr, cache *importCache) (TypeIdentifie
 		if err != nil {
 			return nil, err
 		}
-		return PointerTypeIdentifier{TypeIdentifier: typeID}, nil
+		return &PointerTypeIdentifier{TypeIdentifier: typeID}, nil
 	case *ast.FuncType:
 		// example: type MyFunc func(string) (int, error)
-		return parseFuncTypeToTypeIdentifier(x, cache)
+		return parseFuncTypeToFuncTypeIdentifier(x, cache)
 	case *ast.Ellipsis:
 		typeID, err := parseExprToTypeIdentifier(x.Elt, cache)
 		if err != nil {
 			return nil, err
 		}
-		return EllipsisTypeIdentifier{TypeIdentifier: typeID}, nil
+		return &EllipsisTypeIdentifier{TypeIdentifier: typeID}, nil
 	default:
 		return nil, errExprTypeNotSupported{x: x}
 		// case *ast.StructType:

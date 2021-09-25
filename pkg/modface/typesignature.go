@@ -32,7 +32,7 @@ func (e errTypeNotExported) Error() string {
 	return fmt.Sprintf("type not exported: %s", e.typeName)
 }
 
-func parseTypeSignature(spec *ast.TypeSpec, cache *importCache) (Export, error) {
+func parseTypeSignature(spec *ast.TypeSpec, cache *importCache) (*TypeSignature, error) {
 	typeName := spec.Name.Name
 
 	// do not continue if type is not exported

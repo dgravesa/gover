@@ -38,7 +38,7 @@ func parseSelectorExprToTypeIdentifier(s *ast.SelectorExpr, cache *importCache) 
 		if !found {
 			return nil, errImportNotFound{pkgShortName: pkgShortName}
 		}
-		return ImportedTypeIdentifier{
+		return &ImportedTypeIdentifier{
 			PackageName: pkgFullName,
 			TypeName:    s.Sel.Name,
 		}, nil

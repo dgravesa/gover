@@ -8,48 +8,52 @@ import (
 
 // FuncTypeIdentifier identifies a function type.
 type FuncTypeIdentifier struct {
-	ParamTypes  []TypeIdentifier // TODO: need to handle ...
+	ParamTypes  []TypeIdentifier
 	ResultTypes []TypeIdentifier
 }
 
-func joinTypeIDsToString(typeIDs []TypeIdentifier) string {
-	typeStrings := []string{}
-	for _, typeID := range typeIDs {
-		typeStrings = append(typeStrings, typeID.String())
+func (fti FuncTypeIdentifier) formBaseTypeString() string {
+	joinTypeIDsToString := func(typeIDs []TypeIdentifier) string {
+		typeStrings := []string{}
+		for _, typeID := range typeIDs {
+			typeStrings = append(typeStrings, typeID.String())
+		}
+		return strings.Join(typeStrings, ", ")
 	}
-	return strings.Join(typeStrings, ", ")
-}
 
-func (fi FuncTypeIdentifier) String() string {
-	paramTypesStr := joinTypeIDsToString(fi.ParamTypes)
-	resultTypesStr := joinTypeIDsToString(fi.ResultTypes)
+	paramTypesStr := joinTypeIDsToString(fti.ParamTypes)
+	resultTypesStr := joinTypeIDsToString(fti.ResultTypes)
 
-	switch len(fi.ResultTypes) {
+	switch len(fti.ResultTypes) {
 	case 0:
-		return fmt.Sprintf("func(%s)", paramTypesStr)
+		return fmt.Sprintf("(%s)", paramTypesStr)
 	case 1:
-		return fmt.Sprintf("func(%s) %s", paramTypesStr, resultTypesStr)
+		return fmt.Sprintf("(%s) %s", paramTypesStr, resultTypesStr)
 	default:
-		return fmt.Sprintf("func(%s) (%s)", paramTypesStr, resultTypesStr)
+		return fmt.Sprintf("(%s) (%s)", paramTypesStr, resultTypesStr)
 	}
 }
 
-func (fi FuncTypeIdentifier) typeID() string {
+func (fti FuncTypeIdentifier) String() string {
+	return fmt.Sprintf("func%s", fti.formBaseTypeString())
+}
+
+func (fti FuncTypeIdentifier) typeID() string {
 	var sb strings.Builder
 	sb.WriteString("func(")
-	for _, paramType := range fi.ParamTypes {
+	for _, paramType := range fti.ParamTypes {
 		sb.WriteString(paramType.typeID())
 		sb.WriteString(",")
 	}
 	sb.WriteString(")")
-	for _, resultType := range fi.ResultTypes {
+	for _, resultType := range fti.ResultTypes {
 		sb.WriteString(resultType.typeID())
 		sb.WriteString(",")
 	}
 	return sb.String()
 }
 
-func parseFuncTypeToTypeIdentifier(funcType *ast.FuncType, cache *importCache) (TypeIdentifier, error) {
+func parseFuncTypeToFuncTypeIdentifier(funcType *ast.FuncType, cache *importCache) (*FuncTypeIdentifier, error) {
 	listTypeIdentifiersFromFieldList := func(fieldList *ast.FieldList) ([]TypeIdentifier, error) {
 		if fieldList == nil {
 			return nil, nil
@@ -80,7 +84,7 @@ func parseFuncTypeToTypeIdentifier(funcType *ast.FuncType, cache *importCache) (
 		return nil, err
 	}
 
-	return FuncTypeIdentifier{
+	return &FuncTypeIdentifier{
 		ParamTypes:  paramTypes,
 		ResultTypes: resultTypes,
 	}, nil
