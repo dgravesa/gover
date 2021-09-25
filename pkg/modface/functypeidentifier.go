@@ -56,11 +56,16 @@ func parseFuncTypeToTypeIdentifier(funcType *ast.FuncType, cache *importCache) (
 		}
 		typeIDs := []TypeIdentifier{}
 		for _, field := range fieldList.List {
+			// identify type
 			typeID, err := parseExprToTypeIdentifier(field.Type, cache)
 			if err != nil {
 				return nil, err
 			}
-			typeIDs = append(typeIDs, typeID)
+			// determine number of consecutive parameters with type
+			numParamsWithType := maxInt(1, len(field.Names))
+			for i := 0; i < numParamsWithType; i++ {
+				typeIDs = append(typeIDs, typeID)
+			}
 		}
 		return typeIDs, nil
 	}
@@ -79,4 +84,11 @@ func parseFuncTypeToTypeIdentifier(funcType *ast.FuncType, cache *importCache) (
 		ParamTypes:  paramTypes,
 		ResultTypes: resultTypes,
 	}, nil
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

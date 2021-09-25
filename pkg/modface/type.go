@@ -121,10 +121,3 @@ func appendStrN(slice []string, str string, N int) []string {
 	}
 	return append(slice, strs...)
 }
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
