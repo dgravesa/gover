@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/ast"
 	"path/filepath"
-	"reflect"
 )
 
 // ImportedTypeIdentifier corresponds to a type imported from another package.
@@ -19,23 +18,31 @@ func (iti ImportedTypeIdentifier) String() string {
 }
 
 // TypeID returns a unique ID for the type across any go packages.
-func (iti ImportedTypeIdentifier) TypeID() string {
+func (iti ImportedTypeIdentifier) typeID() string {
 	return fmt.Sprintf("%s.%s", iti.PackageName, iti.TypeName)
 }
 
-func parseSelectorExprToImportedTypeIdentifier(s *ast.SelectorExpr, cache *importCache) (ImportedTypeIdentifier, error) {
+type errImportNotFound struct {
+	pkgShortName string
+}
+
+func (e errImportNotFound) Error() string {
+	return fmt.Sprintf("import not found: %s", e.pkgShortName)
+}
+
+func parseSelectorExprToTypeIdentifier(s *ast.SelectorExpr, cache *importCache) (TypeIdentifier, error) {
 	switch x := s.X.(type) {
 	case *ast.Ident:
 		pkgShortName := x.Name
 		pkgFullName, found := cache.FindShortName(pkgShortName)
 		if !found {
-			return ImportedTypeIdentifier{}, fmt.Errorf("import not found: %s", pkgShortName)
+			return nil, errImportNotFound{pkgShortName: pkgShortName}
 		}
 		return ImportedTypeIdentifier{
 			PackageName: pkgFullName,
 			TypeName:    s.Sel.Name,
 		}, nil
 	default:
-		return ImportedTypeIdentifier{}, fmt.Errorf("unsupported expr type: %s", reflect.TypeOf(s.X))
+		return nil, errExprTypeNotSupported{x: s.X}
 	}
 }

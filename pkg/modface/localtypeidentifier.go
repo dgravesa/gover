@@ -10,6 +10,7 @@ func (lti LocalTypeIdentifier) String() string {
 }
 
 // TypeID returns a unique ID for the type across any go packages.
-func (lti LocalTypeIdentifier) TypeID() string {
+func (lti LocalTypeIdentifier) typeID() string {
+	// NOTE: this is a guaranteed unique ID within the context of a package, but not outside of it.
 	return lti.String()
 }

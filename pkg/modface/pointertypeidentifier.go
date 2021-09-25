@@ -12,6 +12,6 @@ func (pti PointerTypeIdentifier) String() string {
 }
 
 // TypeID returns a certain, unmistakable type with full package name qualifiers.
-func (pti PointerTypeIdentifier) TypeID() string {
-	return fmt.Sprintf("*%s", pti.TypeIdentifier.TypeID())
+func (pti PointerTypeIdentifier) typeID() string {
+	return fmt.Sprintf("*%s", pti.TypeIdentifier.typeID())
 }

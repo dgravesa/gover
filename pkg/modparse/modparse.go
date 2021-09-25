@@ -12,6 +12,14 @@ func ModuleDirs(path string) ([]string, error) {
 	return moduleDirs(path, "", true)
 }
 
+type errNotGoModule struct {
+	basepath string
+}
+
+func (e errNotGoModule) Error() string {
+	return fmt.Sprintf("%s does not define a go module", e.basepath)
+}
+
 func moduleDirs(basepath, relpath string, thismod bool) ([]string, error) {
 	fullpath := filepath.Join(basepath, relpath)
 	f, err := os.Open(fullpath)
@@ -59,7 +67,7 @@ func moduleDirs(basepath, relpath string, thismod bool) ([]string, error) {
 	}
 
 	if thismod && !ismod {
-		return nil, fmt.Errorf("%s does not define a go module", basepath)
+		return nil, errNotGoModule{basepath: basepath}
 	}
 
 	return moddirs, nil

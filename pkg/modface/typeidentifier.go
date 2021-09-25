@@ -7,5 +7,6 @@ type TypeIdentifier interface {
 	String() string
 
 	// TypeID returns a certain, unmistakable type with full package name qualifiers.
-	TypeID() string
+	// TODO: consider making this not a part of the public interface
+	typeID() string
 }

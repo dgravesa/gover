@@ -9,8 +9,8 @@ import (
 // FuncSignature defines a function signature.
 type FuncSignature struct {
 	Name     string
-	Receiver Type
-	Params   TypeList
+	Receiver Type     // TODO: make this a LocalTypeIdentifier
+	Params   TypeList // TODO: replace Params and Results with a FuncTypeIdentifier field
 	Results  TypeList
 }
 

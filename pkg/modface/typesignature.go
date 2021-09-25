@@ -22,7 +22,7 @@ func (ts TypeSignature) ID() string {
 }
 
 func (ts TypeSignature) compareString() string {
-	return fmt.Sprintf("%s %s", ts.Name, ts.TypeIdentifier.TypeID())
+	return fmt.Sprintf("%s %s", ts.Name, ts.TypeIdentifier.typeID())
 }
 
 type errTypeNotExported struct {
@@ -68,7 +68,7 @@ func parseExprToTypeIdentifier(expr ast.Expr, cache *importCache) (TypeIdentifie
 		return LocalTypeIdentifier{TypeName: x.Name}, nil
 	case *ast.SelectorExpr:
 		// example: type MyContext context.Context
-		return parseSelectorExprToImportedTypeIdentifier(x, cache)
+		return parseSelectorExprToTypeIdentifier(x, cache)
 	case *ast.StarExpr:
 		// example: type MyPtr *int
 		// example: type MyContextPtr *context.Context
@@ -77,6 +77,9 @@ func parseExprToTypeIdentifier(expr ast.Expr, cache *importCache) (TypeIdentifie
 			return nil, err
 		}
 		return PointerTypeIdentifier{TypeIdentifier: typeID}, nil
+	case *ast.FuncType:
+		// example: type MyFunc func(string) (int, error)
+		return parseFuncTypeToTypeIdentifier(x, cache)
 	default:
 		return nil, errExprTypeNotSupported{x: x}
 		// case *ast.StructType:
@@ -96,6 +99,8 @@ func parseExprToTypeIdentifier(expr ast.Expr, cache *importCache) (TypeIdentifie
 		// 	fallthrough
 		// case *ast.ChanType:
 		// 	// example: type Duh chan
+		// 	fallthrough
+		// case *ast.Ellipsis:
 		// 	fallthrough
 	}
 }
