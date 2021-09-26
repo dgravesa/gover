@@ -50,6 +50,16 @@ func parseExprToTypeIdentifier(expr ast.Expr, cache *importCache) (TypeIdentifie
 			return nil, err
 		}
 		return &EllipsisTypeIdentifier{TypeIdentifier: typeID}, nil
+	case *ast.ArrayType:
+		typeID, err := parseExprToTypeIdentifier(x.Elt, cache)
+		if err != nil {
+			return nil, err
+		}
+		if x.Len == nil {
+			return &SliceTypeIdentifier{ElementType: typeID}, nil
+		}
+		// TODO: handle non-slice arrays
+		return nil, errExprTypeNotSupported{x: x}
 	default:
 		return nil, errExprTypeNotSupported{x: x}
 		// case *ast.StructType:
@@ -60,9 +70,6 @@ func parseExprToTypeIdentifier(expr ast.Expr, cache *importCache) (TypeIdentifie
 		// 	fallthrough
 		// case *ast.MapType:
 		// 	// example: type Duh map[string]int
-		// 	fallthrough
-		// case *ast.ArrayType:
-		// 	// example: type Duh []int
 		// 	fallthrough
 		// case *ast.ChanType:
 		// 	// example: type Duh chan
